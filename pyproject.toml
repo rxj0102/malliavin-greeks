@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "malliavin-greeks"
+version = "0.1.0"
+description = "Malliavin calculus Greeks for Monte Carlo derivative pricing"
+readme = "README.md"
+license = {file = "LICENSE"}
+requires-python = ">=3.10"
+dependencies = [
+    "numpy>=1.26",
+    "scipy>=1.12",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4",
+    "pytest-cov",
+    "jupyter",
+    "matplotlib>=3.8",
+    "pandas>=2.0",
+    "tqdm",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v"
