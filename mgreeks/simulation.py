@@ -241,8 +241,8 @@ class MonteCarloEngine:
             return (W_T**2 - T) / (sigma * T) - W_T
 
         elif greek_name == "rho":
-            # ∂/∂r V = disc·E[f·(score_r − T)]  where score_r = W_T·T/σ
-            return W_T * T / sigma - T
+            # score_r = W_T/σ (no T factor); discount adds −T
+            return W_T / sigma - T
 
         elif greek_name == "theta":
             # Uses score w.r.t. T; discount factor correction applied separately
