@@ -1,0 +1,86 @@
+###############################################################################
+# Experiment configuration
+# Run any script with: python experiments/<script>.py
+# Override any value via CLI: --n_paths 200000 --seed 7
+###############################################################################
+
+# ── Random seed (reproducibility) ───────────────────────────────────────────
+seed: 42
+
+# ── Shared model parameters ──────────────────────────────────────────────────
+model:
+  r: 0.05          # risk-free rate
+  q: 0.02          # continuous dividend yield
+  sigma: 0.20      # GBM / base volatility
+
+heston:
+  kappa: 2.0       # mean-reversion speed
+  theta: 0.04      # long-run variance (= 0.20²)
+  xi: 0.30         # vol-of-vol
+  rho: -0.70       # correlation
+  V0: 0.04         # initial variance
+
+local_vol_cev:
+  sigma0: 0.20     # CEV scale volatility
+  beta: 0.70       # CEV elasticity (1.0 = GBM)
+  S_ref: 100.0     # CEV reference spot
+
+# ── Option parameters ────────────────────────────────────────────────────────
+option:
+  S0: 100.0        # initial spot
+  K: 100.0         # strike (ATM)
+  T: 1.0           # maturity (years)
+  B_barrier: 80.0  # knock-out barrier for DOC
+  B_near: 90.0     # near-barrier stress level
+
+# ── Monte Carlo settings ─────────────────────────────────────────────────────
+mc:
+  n_paths: 200000   # paths for main experiments
+  n_paths_fast: 50000   # paths for sweeps / sensitivity tables
+  n_steps: 52       # daily monitoring for path-dependent options
+  n_steps_vanilla: 1  # exact GBM: one step suffices for vanilla
+  bump_size: 0.01   # relative bump for FD (1%)
+  bump_sizes: [0.001, 0.005, 0.01, 0.05, 0.10]   # bump sweep for FD study
+
+# ── Convergence study ────────────────────────────────────────────────────────
+convergence:
+  n_paths_grid: [1000, 3000, 10000, 30000, 100000, 300000]
+  n_reps: 5         # independent replications per n_paths level
+
+# ── Variance comparison experiment ──────────────────────────────────────────
+variance_comparison:
+  greeks: [delta, gamma, vega]
+  option_types:
+    - european_call
+    - european_put
+    - digital_call
+    - arithmetic_asian_call
+    - down_and_out_call
+    - lookback_call
+
+# ── Discontinuous payoffs experiment ─────────────────────────────────────────
+discontinuous:
+  S0_grid_digital:
+    start: 80.0
+    stop: 120.0
+    n_points: 21    # sweep S0 from 80 to 120
+  S0_grid_barrier:
+    start: 82.0
+    stop: 120.0
+    n_points: 20
+
+# ── Higher-order Greeks experiment ───────────────────────────────────────────
+higher_order:
+  S0_grid:
+    start: 70.0
+    stop: 130.0
+    n_points: 13
+  T_grid: [0.25, 0.50, 1.0, 2.0]
+
+# ── Output ────────────────────────────────────────────────────────────────────
+output:
+  dir: experiments/results
+  show_plots: false   # set true for interactive display
+  save_plots: true
+  dpi: 120
+  figsize: [10, 6]
