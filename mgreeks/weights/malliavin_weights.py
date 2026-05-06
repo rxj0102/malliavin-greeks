@@ -372,3 +372,196 @@ def all_weights_gbm(
         "rho":   rho_weight_gbm(S0, ST, sigma, r, q, T, W_T),
         "theta": theta_weight_gbm(S0, ST, sigma, r, q, T, W_T),
     }
+
+
+# ---------------------------------------------------------------------------
+# Convenience aliases for path-dependent payoffs under GBM
+# ---------------------------------------------------------------------------
+
+def asian_delta_weight_gbm(
+    paths: np.ndarray,
+    brownian_increments: np.ndarray,
+    S0: float,
+    sigma: float,
+    T: float,
+    times: np.ndarray,
+) -> np.ndarray:
+    """
+    Malliavin delta weight for Asian options under GBM.
+
+    Returns W_T / (S_0 σ T) — identical to delta_weight_gbm.
+
+    NOTE ON BIAS FOR DISCRETE FIXING DATES
+    ---------------------------------------
+    This formula comes from the continuous-time BEL formula.  For a payoff
+    with n discrete fixing dates t_1,...,t_n (not all equal to T), applying
+    the Wiener-space IBP with constant kernel u_s = 1/(σS_0T) gives a
+    time-weighted estimator that underestimates the delta by a factor of
+    t̄/T (mean fixing time over maturity).  For uniform averaging:
+    t̄/T = (n+1)/(2n) → 1/2 as n → ∞.
+
+    For an unbiased estimator of path-dependent delta, use
+    `delta_weight_path_dependent` (score of the first conditional density).
+    """
+    W_T = brownian_increments.sum(axis=1)
+    return W_T / (S0 * sigma * T)
+
+
+def barrier_delta_weight_gbm(
+    paths: np.ndarray,
+    brownian_increments: np.ndarray,
+    S0: float,
+    sigma: float,
+    T: float,
+    times: np.ndarray,
+    barrier: float = None,
+    barrier_type: str = "down_and_out",
+) -> np.ndarray:
+    """
+    Malliavin delta weight for barrier options under GBM.
+
+    Returns W_T / (S_0 σ T) — the standard GBM delta weight.
+
+    The barrier indicator 1_{survival} is part of the payoff, not the weight.
+    The Malliavin IBP still applies because 1_{survival} is measurable w.r.t.
+    the path and the weight is constructed only from the model (not the payoff).
+
+    For an unbiased discrete-time estimator, use `delta_weight_path_dependent`
+    (score of the first conditional density).  Using W_T/(σS_0T) introduces
+    the same t̄/T bias as for Asian options when monitoring is discrete.
+
+    For continuous monitoring (large n_steps), both estimates converge to the
+    true barrier delta; W_T/(σS_0T) converges more slowly.
+
+    See Gobet & Kohatsu-Higa (2003) for localized variance-reduction variants.
+    """
+    W_T = brownian_increments.sum(axis=1)
+    return W_T / (S0 * sigma * T)
+
+
+def lookback_delta_weight_gbm(
+    paths: np.ndarray,
+    brownian_increments: np.ndarray,
+    S0: float,
+    sigma: float,
+    T: float,
+    times: np.ndarray,
+) -> np.ndarray:
+    """
+    Malliavin delta weight for lookback options under GBM.
+
+    Returns W_T / (S_0 σ T) — the standard GBM delta weight.
+
+    The running maximum/minimum is part of the payoff; the Malliavin weight
+    depends only on the model dynamics and is payoff-independent.  The same
+    discretization bias as for Asian/barrier options applies; use
+    `delta_weight_path_dependent` for unbiased estimation with discrete paths.
+    """
+    W_T = brownian_increments.sum(axis=1)
+    return W_T / (S0 * sigma * T)
+
+
+# ---------------------------------------------------------------------------
+# Heston model Malliavin weights
+# ---------------------------------------------------------------------------
+
+def delta_weight_heston(
+    paths_S: np.ndarray,
+    paths_V: np.ndarray,
+    brownian_increments_S: np.ndarray,
+    brownian_increments_V: np.ndarray,
+    S0: float,
+    V0: float,
+    T: float,
+    times: np.ndarray,
+    model: "HestonModel",
+) -> np.ndarray:
+    """
+    BEL delta weight for the Heston stochastic-volatility model.
+
+    Under Heston, dS_t = (r-q) S_t dt + √V_t S_t dW^S_t, so the
+    first variation Y_t = ∂S_t/∂S_0 satisfies:
+
+        dY_t ≈ ((r-q) + ρ ξ √V_t) Y_t dt + √V_t Y_t dW^S_t
+
+    Approximating Y_s ≈ S_s/S_0 (leading order, exact for ρ=0) and
+    using σ_eff(S,V) = √V · S, the BEL integrand simplifies to:
+
+        Y_s / σ_eff(S_s, V_s) = (S_s/S_0) / (√V_s · S_s) = 1 / (S_0 √V_s)
+
+    Plugging into the BEL formula:
+
+        π_Δ = (1/(S_0 T)) Σ_i (1/√V_{t_i}) · ΔW^S_i
+
+    where ΔW^S_i are the SPOT Brownian increments (accounting for the
+    rho-correlation decomposition already present in the simulation).
+
+    The variance paths V_{t_i} must be bounded away from zero; we clip at 1e-8.
+
+    Parameters
+    ----------
+    paths_S               : spot paths, shape (n_paths, n_steps+1)
+    paths_V               : variance paths, shape (n_paths, n_steps+1)
+    brownian_increments_S : ΔW^S_i, shape (n_paths, n_steps)
+    brownian_increments_V : ΔW^V_i, shape (n_paths, n_steps) [unused, kept for API]
+    S0                    : initial spot
+    V0                    : initial variance
+    T                     : maturity
+    times                 : time grid, shape (n_steps+1,)
+    model                 : HestonModel instance
+
+    Returns
+    -------
+    Weight array, shape (n_paths,)
+    """
+    V_mid = np.maximum(paths_V[:, :-1], 1e-8)   # (n_paths, n_steps)
+    inv_sqrt_V = 1.0 / np.sqrt(V_mid)
+    weight = np.sum(inv_sqrt_V * brownian_increments_S, axis=1)
+    return weight / (S0 * T)
+
+
+def vega_weight_heston(
+    paths_S: np.ndarray,
+    paths_V: np.ndarray,
+    brownian_increments_S: np.ndarray,
+    brownian_increments_V: np.ndarray,
+    S0: float,
+    V0: float,
+    T: float,
+    times: np.ndarray,
+    model: "HestonModel",
+) -> np.ndarray:
+    """
+    Malliavin weight for Heston vega (∂V/∂V_0).
+
+    The sensitivity ∂S_t/∂V_0 satisfies a variational SDE driven by
+    the variance process:
+
+        d(∂S_t/∂V_0) = (r-q)(∂S_t/∂V_0)dt
+                      + (1/(2√V_t))(∂V_t/∂V_0) S_t dW^S_t
+                      + √V_t (∂S_t/∂V_0) dW^S_t
+
+    where ∂V_t/∂V_0 satisfies:
+
+        d(∂V_t/∂V_0) = -κ(∂V_t/∂V_0)dt + ξ/(2√V_t)(∂V_t/∂V_0)dW^V_t
+
+    with ∂V_0/∂V_0 = 1.  This is approximated as:
+
+        ∂V_t/∂V_0 ≈ exp(-κt)   (exact for ξ=0)
+
+    Then the leading-order BEL vega weight is:
+
+        π_v ≈ (1/(2 T)) Σ_i (S_{t_i}/S_0) exp(-κ t_i) / (√V_{t_i} S_{t_i})
+                      × ΔW^S_i
+            = (1/(2 S_0 T)) Σ_i exp(-κ t_i) / √V_{t_i} × ΔW^S_i
+    """
+    n_steps = brownian_increments_S.shape[1]
+    dt = T / n_steps
+    times_mid = times[:-1]                       # t_0, t_1, ..., t_{n-1}
+
+    V_mid = np.maximum(paths_V[:, :-1], 1e-8)   # (n_paths, n_steps)
+    inv_sqrt_V = 1.0 / np.sqrt(V_mid)
+    decay = np.exp(-model.kappa * times_mid)     # exp(-κ t_i), shape (n_steps,)
+
+    weight = np.sum(inv_sqrt_V * decay[np.newaxis, :] * brownian_increments_S, axis=1)
+    return weight / (2.0 * S0 * T)

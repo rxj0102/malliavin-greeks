@@ -206,14 +206,17 @@ def geometric_asian_greeks(
     # Adjusted volatility (exact for discrete geometric average)
     sigma_adj = sigma * np.sqrt((n + 1) * (2 * n + 1) / (6 * n**2))
 
-    # Drift of the geometric mean's log under risk-neutral measure
+    # Drift of log G under risk-neutral measure (for n equally-spaced fixing dates)
     mu = r - q - 0.5 * sigma**2
     mu_adj = 0.5 * mu * (n + 1) / n + 0.5 * sigma_adj**2
-    r_adj = mu_adj + q
+
+    # Forward of G: S_0 * exp(mu_adj * T).  To use the BS formula with
+    # discount rate r (not mu_adj+q), set q_adj so that r - q_adj = mu_adj.
+    q_adj = r - mu_adj
 
     from mgreeks.utils import bs_price, bs_greeks
 
-    price = bs_price(S0, K, r_adj, q, sigma_adj, T, "call")
-    greeks = bs_greeks(S0, K, r_adj, q, sigma_adj, T, "call")
+    price = bs_price(S0, K, r, q_adj, sigma_adj, T, "call")
+    greeks = bs_greeks(S0, K, r, q_adj, sigma_adj, T, "call")
 
     return {"price": price, **greeks}
