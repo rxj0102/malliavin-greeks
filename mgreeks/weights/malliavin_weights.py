@@ -514,10 +514,8 @@ def delta_weight_heston(
     -------
     Weight array, shape (n_paths,)
     """
-    V_mid = np.maximum(paths_V[:, :-1], 1e-8)   # (n_paths, n_steps)
-    inv_sqrt_V = 1.0 / np.sqrt(V_mid)
-    weight = np.sum(inv_sqrt_V * brownian_increments_S, axis=1)
-    return weight / (S0 * T)
+    from mgreeks.weights._numba_kernels import heston_delta_weight_jit
+    return heston_delta_weight_jit(paths_V, brownian_increments_S, S0, T)
 
 
 def vega_weight_heston(

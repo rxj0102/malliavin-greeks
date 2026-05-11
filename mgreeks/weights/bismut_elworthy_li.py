@@ -162,45 +162,30 @@ def _bel_delta_local_vol(
 
     The integrand in the BEL formula is Y_{t_i} / σ_local_diff(S_{t_i})
     where σ_local_diff(S) = σ_loc(t,S)·S is the (multiplicative) diffusion.
+
+    The inner stochastic-integral loop is JIT-compiled via numba when available;
+    falls back to a vectorised NumPy loop otherwise.  The pre-computation of
+    σ_loc and ∂σ_loc/∂S (Python calls to model._sigma_func) remains outside
+    the JIT region since those calls are model-specific Python objects.
     """
+    from mgreeks.weights._numba_kernels import bel_integral_local_vol
+
     n_steps = len(times) - 1
-    n_paths = paths.shape[0]
     dt = times[1] - times[0]
 
-    weight = np.zeros(n_paths)
-    Y = np.ones(n_paths)           # Y_0 = 1
-
+    # Pre-compute σ_loc and ∂σ_loc/∂S over all paths × steps outside JIT
+    sigma_loc_arr = np.empty((paths.shape[0], n_steps))
+    sigma_loc_deriv_arr = np.empty_like(sigma_loc_arr)
     for i in range(n_steps):
         t_i = times[i]
-        S_i = paths[:, i]
+        sigma_loc_arr[:, i] = model._sigma_func(t_i, paths[:, i])
+        sigma_loc_deriv_arr[:, i] = model._sigma_deriv_func(t_i, paths[:, i])
 
-        # Local vol and its spatial derivative
-        sigma_loc = model._sigma_func(t_i, S_i)        # σ_loc(t_i, S_i)
-        sigma_loc_deriv = model._sigma_deriv_func(t_i, S_i)  # ∂σ_loc/∂S
-
-        # Full diffusion coefficient: σ_diff(S) = σ_loc(t,S)·S
-        sigma_diff = sigma_loc * S_i
-
-        # Accumulate the Itô integral: integrand = Y_i / sigma_diff_i
-        integrand = Y / sigma_diff
-        weight += integrand * brownian_increments[:, i]
-
-        # Update first-variation: use log-Euler ratio
-        ratio = paths[:, i + 1] / S_i
-        # Correction terms from Itô's formula for the variational SDE:
-        # d log Y_t = (b'−½(σ_diff')²)dt + σ_diff' dW_t
-        # For GBM-like local vol: b'(S) = r − q − σ²_loc/2 (log-price drift)
-        # σ_diff'(S) = ∂/∂S [σ_loc·S] = σ_loc + S·∂σ_loc/∂S
-        sigma_diff_deriv = sigma_loc + S_i * sigma_loc_deriv   # ∂(σ_loc·S)/∂S
-
-        # Log-Euler update for Y (first variation):
-        # log(Y_{i+1}/Y_i) ≈ log(S_{i+1}/S_i) + (σ_diff'·S_i − σ_loc·S_i)·ΔW_i/S_i
-        # = log(S_{i+1}/S_i) + (σ_diff' − σ_loc)·ΔW_i
-        # (σ_diff' − σ_loc) = S_i·∂σ_loc/∂S
-        corr = S_i * sigma_loc_deriv * brownian_increments[:, i]
-        Y = Y * ratio * np.exp(corr - 0.5 * (S_i * sigma_loc_deriv)**2 * dt)
-
-    return weight / T
+    return bel_integral_local_vol(
+        paths, brownian_increments,
+        sigma_loc_arr, sigma_loc_deriv_arr,
+        dt, T,
+    )
 
 
 # ---------------------------------------------------------------------------
