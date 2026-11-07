@@ -1,5 +1,7 @@
 # malliavin-greeks: Sensitivity Computation via Malliavin Calculus
 
+[![CI](https://github.com/rxj0102/malliavin-greeks/actions/workflows/ci.yml/badge.svg)](https://github.com/rxj0102/malliavin-greeks/actions/workflows/ci.yml)
+
 A research-grade Python library for computing option Greeks (sensitivities) using **Malliavin calculus integration by parts** — a technique that avoids differentiating the payoff function and thereby works for **discontinuous payoffs** such as digital options and barrier options.
 
 ## Mathematical Foundation
