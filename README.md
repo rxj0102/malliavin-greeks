@@ -23,9 +23,11 @@ Comparison of delta estimation for a **digital call** at-the-money (S₀=K=100, 
 | Method | SE ratio vs Malliavin | Note |
 |--------|----------------------|------|
 | Malliavin | 1.0 (baseline) | Finite variance, SE ∝ 1/√n |
-| FD (h=1%) | 8.3× worse | SE ∝ 1/(h√n) → ∞ as h → 0 |
-| FD (h=0.1%) | 83× worse | Variance explodes |
+| FD (h=1%) | about 3.3× worse | SE ∝ 1/√(h·n) → ∞ as h → 0 |
+| FD (h=0.1%) | about 10.7× worse | Variance grows like 1/h |
 | Pathwise/IPA | N/A | Infinite variance (Dirac delta) |
+
+Ratios measured with n = 1,000,000 paths, seed 0, common random numbers for FD; reproduce with `python experiments/digital_fd_ratio.py`.
 
 For a **European call**, FD with common random numbers achieves lower variance than Malliavin for delta (smooth payoff), but Malliavin computes all Greeks from one simulation while FD needs 2+ extra simulations per Greek.
 
