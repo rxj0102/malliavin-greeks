@@ -25,7 +25,7 @@ Comparison of delta estimation for a **digital call** at-the-money (S₀=K=100, 
 | Malliavin | 1.0 (baseline) | Finite variance, SE ∝ 1/√n |
 | FD (h=1%) | about 3.3× worse | SE ∝ 1/√(h·n) → ∞ as h → 0 |
 | FD (h=0.1%) | about 10.7× worse | Variance grows like 1/h |
-| Pathwise/IPA | N/A | Infinite variance (Dirac delta) |
+| Pathwise/IPA | N/A | Biased: the payoff derivative is zero almost everywhere, so the estimator returns 0 and misses the Dirac mass at K |
 
 Ratios measured with n = 1,000,000 paths, seed 0, common random numbers for FD; reproduce with `python experiments/digital_fd_ratio.py`.
 

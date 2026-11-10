@@ -96,7 +96,8 @@ class DigitalCall(_Payoff):
     Malliavin / LR methods SHINE.
 
     The pathwise derivative ∂/∂S_T 1_{S_T > K} = δ(S_T − K) is a Dirac
-    delta — the pathwise (IPA) estimator has infinite variance.
+    delta. Path by path the derivative is 0 almost surely, so the pathwise
+    (IPA) estimator returns 0 and is biased.
 
     The Malliavin/LR estimator uses the weight π = W_T/(σ S_0 T) which
     has finite variance regardless of moneyness.
