@@ -185,7 +185,7 @@ For f(S_T) = 1_{S_T > K}, the gamma ∂²V/∂S₀² involves:
 ∂²/∂S₀² E[1_{S_T>K}] = E[δ'(S_T − K) · (∂S_T/∂S₀)²]
 ```
 
-where δ'(x) is the **derivative of the Dirac delta** — an object of infinite variance in MC.  
+where δ'(x) is the **derivative of the Dirac delta**, which simulation cannot evaluate: path by path it is 0 almost surely, so a pathwise estimator returns 0 (biased).  
 FD gamma for a digital has variance O(1/h³) → ∞ as h → 0. No bump size is acceptable.
 
 Malliavin: E[1_{S_T>K} · π_Γ]. The weight π_Γ is the same closed-form expression regardless of the payoff singularity. Variance is finite (O(E[π_Γ²]) × Cauchy–Schwarz).

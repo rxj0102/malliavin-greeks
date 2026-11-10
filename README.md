@@ -25,7 +25,7 @@ Comparison of delta estimation for a **digital call** at-the-money (S₀=K=100, 
 | Malliavin | 1.0 (baseline) | Finite variance, SE ∝ 1/√n |
 | FD (h=1%) | about 3.3× worse | SE ∝ 1/√(h·n) → ∞ as h → 0 |
 | FD (h=0.1%) | about 10.7× worse | Variance grows like 1/h |
-| Pathwise/IPA | N/A | Infinite variance (Dirac delta) |
+| Pathwise/IPA | N/A | Biased: the payoff derivative is zero almost everywhere, so the estimator returns 0 and misses the Dirac mass at K |
 
 Ratios measured with n = 1,000,000 paths, seed 0, common random numbers for FD; reproduce with `python experiments/digital_fd_ratio.py`.
 
@@ -198,6 +198,32 @@ Test coverage:
 | `02_greeks_comparison.ipynb` | All four methods for European call. Convergence and bump-size dilemma. |
 | `03_exotic_greeks.ipynb` | Asian, barrier, lookback Greeks. Barrier problem: FD fails near B, Malliavin stays flat. |
 | `04_variance_analysis.ipynb` | Variance ratios, antithetic VRR, timing comparison, practical decision guide. |
+
+## Reproducibility
+
+### Data availability
+
+No external data is downloaded. Inputs are generated or parameterised inside the code.
+
+### Computational requirements
+
+- Python 3.12.3. Every dependency version is pinned in `uv.lock`.
+- Checked on Linux x86_64 with 2 CPU cores and 8 GB RAM. No GPU is needed.
+
+```bash
+pip install uv     # once
+uv sync            # installs the exact pinned environment
+uv run pytest -q   # runs the test suite
+```
+
+### Runtime
+
+The test suite (315 tests) finishes in about 2 minutes on the machine above, including any data downloads it triggers.
+
+### Citation
+
+Citation metadata is in `CITATION.cff`. GitHub turns it into a Cite this repository button on the repo page.
+
 
 ## References
 

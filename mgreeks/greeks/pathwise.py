@@ -7,7 +7,8 @@ the asset price.  Works for:
   - Asian calls/puts:    ∂f/∂S_0 = 1_{A>K} · A/S_0
 
 FAILS for discontinuous payoffs:
-  - Digitals:  ∂f/∂S_T = δ(S_T - K)  — undefined (infinite variance)
+  - Digitals:  ∂f/∂S_T = δ(S_T - K); path by path this is 0 almost surely,
+               so the estimator returns 0 (biased, misses the mass at K)
   - Barriers:  ∂f/∂S_T involves Dirac mass on the barrier
 
 Under GBM, ∂S_T/∂S_0 = S_T/S_0, so:
