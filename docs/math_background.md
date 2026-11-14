@@ -164,7 +164,7 @@ For a digital call f(S_T) = 1_{S_T > K}, the naive pathwise estimator requires:
 ∂/∂S₀ E[1_{S_T > K}] = E[δ(S_T - K) · ∂S_T/∂S₀]
 ```
 
-where δ is the Dirac delta — **not a function**, and the Monte Carlo estimator has **infinite variance**.
+where δ is the Dirac delta, which is **not a function**. Differentiating the indicator path by path gives 0 almost surely, so the naive pathwise estimator returns 0: it is **biased**, missing all of the mass at K, rather than noisy.
 
 The Malliavin IBP moves the derivative off f:
 

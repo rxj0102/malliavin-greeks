@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/rxj0102/malliavin-greeks/actions/workflows/ci.yml/badge.svg)](https://github.com/rxj0102/malliavin-greeks/actions/workflows/ci.yml)
 
-A research-grade Python library for computing option Greeks (sensitivities) using **Malliavin calculus integration by parts** — a technique that avoids differentiating the payoff function and thereby works for **discontinuous payoffs** such as digital options and barrier options.
+A research-grade Python library for computing option Greeks (sensitivities) using **Malliavin calculus integration by parts**: a technique that avoids differentiating the payoff function and thereby works for **discontinuous payoffs** such as digital options and barrier options.
 
 ## Mathematical Foundation
 
@@ -12,7 +12,7 @@ For a derivative with payoff f(S_T) and option value V = e^{−rT} E[f(S_T)], th
 ∂V/∂θ = e^{−rT} E[f(S_T) · π_θ]
 ```
 
-where **π_θ** is the *Malliavin weight* — a random variable that depends on the Brownian path and the model parameters, but **not on the payoff function f**. This is the Bismut–Elworthy–Li (BEL) formula applied to option Greeks.
+where **π_θ** is the *Malliavin weight*: a random variable that depends on the Brownian path and the model parameters, but **not on the payoff function f**. This is the Bismut–Elworthy–Li (BEL) formula applied to option Greeks.
 
 Key consequence: f is never differentiated, so the formula works equally well for smooth European calls and discontinuous digital or barrier payoffs.
 
@@ -25,7 +25,7 @@ Comparison of delta estimation for a **digital call** at-the-money (S₀=K=100, 
 | Malliavin | 1.0 (baseline) | Finite variance, SE ∝ 1/√n |
 | FD (h=1%) | about 3.3× worse | SE ∝ 1/√(h·n) → ∞ as h → 0 |
 | FD (h=0.1%) | about 10.7× worse | Variance grows like 1/h |
-| Pathwise/IPA | N/A | Infinite variance (Dirac delta) |
+| Pathwise/IPA | N/A | Biased: the payoff derivative is zero almost everywhere, so the estimator returns 0 and misses the Dirac mass at K |
 
 Ratios measured with n = 1,000,000 paths, seed 0, common random numbers for FD; reproduce with `python experiments/digital_fd_ratio.py`.
 
@@ -78,7 +78,7 @@ print(f"Vega:  {vega['value']:.4f} ± {vega['std_error']:.4f}")
 print(f"BS Delta: {bs_delta(S0, 100, T, 0.05, 0.02, 0.20, 'call'):.4f}")
 ```
 
-Digital call — same weight, discontinuous payoff:
+Digital call; same weight, discontinuous payoff:
 
 ```python
 digital = DigitalCall(K=100.0)
@@ -114,12 +114,12 @@ print(f"Digital Delta: {delta_d['value']:.4f} ± {delta_d['std_error']:.4f}")
 | Greek | Malliavin | FD | Pathwise | LR |
 |-------|-----------|----|---------|----|
 | Delta | ✓ (all models) | ✓ | ✓ (smooth only) | ✓ |
-| Gamma | ✓ (GBM, closed form) | ✓ | — | ✓ |
+| Gamma | ✓ (GBM, closed form) | ✓ | n/a | ✓ |
 | Vega | ✓ (GBM, Heston) | ✓ | ✓ (smooth only) | ✓ |
-| Rho | ✓ (GBM) | ✓ | — | — |
-| Theta | ✓ (GBM) | ✓ | — | — |
-| Vanna (∂²/∂S∂σ) | ✓ (GBM) | ✓ (4 sims) | — | — |
-| Volga (∂²/∂σ²) | ✓ (GBM) | ✓ (3 sims) | — | — |
+| Rho | ✓ (GBM) | ✓ | n/a | n/a |
+| Theta | ✓ (GBM) | ✓ | n/a | n/a |
+| Vanna (∂²/∂S∂σ) | ✓ (GBM) | ✓ (4 sims) | n/a | n/a |
+| Volga (∂²/∂σ²) | ✓ (GBM) | ✓ (3 sims) | n/a | n/a |
 
 ### Variance Reduction
 
@@ -179,16 +179,16 @@ pytest tests/ -v
 ```
 
 Test coverage:
-- `test_malliavin_weights.py` — GBM weight formulas vs analytical Greeks
-- `test_greeks.py` — MalliavinGreeks, FiniteDifferenceGreeks, PathwiseGreeks, LikelihoodRatioGreeks
-- `test_greeks_exotic.py` — Asian, barrier, lookback, Heston weights
-- `test_variance_reduction.py` — antithetic VRR, control variate correlation, localization bias
+- `test_malliavin_weights.py`: GBM weight formulas vs analytical Greeks
+- `test_greeks.py`: MalliavinGreeks, FiniteDifferenceGreeks, PathwiseGreeks, LikelihoodRatioGreeks
+- `test_greeks_exotic.py`: Asian, barrier, lookback, Heston weights
+- `test_variance_reduction.py`: antithetic VRR, control variate correlation, localization bias
 
 ## Documentation
 
-- `docs/math_background.md` — Malliavin derivative, IBP formula, Clark–Ocone, Hermite polynomials, BEL formula
-- `docs/weight_derivations.md` — Full derivations of all weight formulas (delta, gamma, vega, rho, theta, Heston, path-dependent)
-- `docs/variance_analysis.md` — When FD fails, variance bounds, practical method-selection guide
+- `docs/math_background.md`: Malliavin derivative, IBP formula, Clark–Ocone, Hermite polynomials, BEL formula
+- `docs/weight_derivations.md`: Full derivations of all weight formulas (delta, gamma, vega, rho, theta, Heston, path-dependent)
+- `docs/variance_analysis.md`: When FD fails, variance bounds, practical method-selection guide
 
 ## Notebooks
 
@@ -199,28 +199,54 @@ Test coverage:
 | `03_exotic_greeks.ipynb` | Asian, barrier, lookback Greeks. Barrier problem: FD fails near B, Malliavin stays flat. |
 | `04_variance_analysis.ipynb` | Variance ratios, antithetic VRR, timing comparison, practical decision guide. |
 
+## Reproducibility
+
+### Data availability
+
+No external data is downloaded. Inputs are generated or parameterised inside the code.
+
+### Computational requirements
+
+- Python 3.12.3. Every dependency version is pinned in `uv.lock`.
+- Checked on Linux x86_64 with 2 CPU cores and 8 GB RAM. No GPU is needed.
+
+```bash
+pip install uv     # once
+uv sync            # installs the exact pinned environment
+uv run pytest -q   # runs the test suite
+```
+
+### Runtime
+
+The test suite (315 tests) finishes in about 2 minutes on the machine above, including any data downloads it triggers.
+
+### Citation
+
+Citation metadata is in `CITATION.cff`. GitHub turns it into a Cite this repository button on the repo page.
+
+
 ## References
 
-1. **Fournié, E., Lasry, J.-M., Lebuchoux, J., Lions, P.-L. & Touzi, N. (1999)** —  
-   "Applications of Malliavin calculus to Monte Carlo methods in finance."  
+1. **Fournié, E., Lasry, J.-M., Lebuchoux, J., Lions, P.-L. & Touzi, N. (1999)**: 
+   *Applications of Malliavin calculus to Monte Carlo methods in finance.*  
    *Finance and Stochastics* **3**, 391–412.
 
-2. **Fournié, E., Lasry, J.-M., Lebuchoux, J. & Lions, P.-L. (2001)** —  
-   "Applications of Malliavin calculus to Monte Carlo methods in finance II."  
+2. **Fournié, E., Lasry, J.-M., Lebuchoux, J. & Lions, P.-L. (2001)**: 
+   *Applications of Malliavin calculus to Monte Carlo methods in finance II.*  
    *Finance and Stochastics* **5**, 201–236.
 
-3. **Nualart, D. (2006)** — *The Malliavin Calculus and Related Topics*, 2nd ed. Springer.
+3. **Nualart, D. (2006)**: *The Malliavin Calculus and Related Topics*, 2nd ed. Springer.
 
-4. **Bismut, J.-M. (1984)** — *Large Deviations and the Malliavin Calculus*. Birkhäuser.
+4. **Bismut, J.-M. (1984)**: *Large Deviations and the Malliavin Calculus*. Birkhäuser.
 
-5. **Elworthy, K.D. & Li, X.-M. (1994)** — "Formulae for the derivatives of heat semigroups."  
+5. **Elworthy, K.D. & Li, X.-M. (1994)**: *Formulae for the derivatives of heat semigroups.*  
    *J. Functional Analysis* **125**, 252–286.
 
-6. **Gobet, E. & Kohatsu-Higa, A. (2003)** — "Computation of Greeks for barrier and  
-   look-back options using Malliavin calculus."  
+6. **Gobet, E. & Kohatsu-Higa, A. (2003)**: *Computation of Greeks for barrier and  
+   look-back options using Malliavin calculus.*  
    *Electronic Communications in Probability* **8**, 51–62.
 
-7. **Andersen, L. (2008)** — "Simple and efficient simulation of the Heston stochastic  
-   volatility model." *Journal of Computational Finance* **11(3)**, 1–42.
+7. **Andersen, L. (2008)**: *Simple and efficient simulation of the Heston stochastic  
+   volatility model.* *Journal of Computational Finance* **11(3)**, 1–42.
 
-8. **Glasserman, P. (2004)** — *Monte Carlo Methods in Financial Engineering*. Springer.
+8. **Glasserman, P. (2004)**: *Monte Carlo Methods in Financial Engineering*. Springer.
