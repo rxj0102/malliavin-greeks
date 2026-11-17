@@ -54,7 +54,8 @@ class LocalVolModel(StochasticModel):
     q               : dividend yield
     sigma_func      : callable(t, S) → σ_loc(t, S), shape (n_paths,) → (n_paths,)
     sigma_deriv_func: callable(t, S) → ∂σ_loc/∂S(t, S)  [for Malliavin derivative]
-    model_type      : 'cev', 'quadratic', or 'custom'
+    model_type      : 'cev', 'quadratic' or 'custom'; default 'custom' when
+                      sigma_func is given, else 'cev'
     **model_params  : parameters passed to the built-in parameterisations
     """
 
@@ -66,11 +67,19 @@ class LocalVolModel(StochasticModel):
         q: float = 0.0,
         sigma_func: Optional[Callable] = None,
         sigma_deriv_func: Optional[Callable] = None,
-        model_type: str = "cev",
+        model_type: Optional[str] = None,
         **model_params,
     ):
         self.r = float(r)
         self.q = float(q)
+        # A sigma_func means a custom surface. It used to be ignored unless
+        # model_type="custom" was also passed: the model then silently ran the
+        # default CEV surface instead of the one given.
+        if model_type is None:
+            model_type = "custom" if sigma_func is not None else "cev"
+        elif sigma_func is not None and model_type != "custom":
+            raise ValueError(f"sigma_func was given with model_type={model_type!r}; "
+                             "use model_type='custom' or drop sigma_func")
         self.model_type = model_type
         self.model_params = model_params
 

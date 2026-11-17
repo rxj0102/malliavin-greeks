@@ -29,7 +29,7 @@ dev = [
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["mgreeks*", "src*"]
+include = ["mgreeks*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
