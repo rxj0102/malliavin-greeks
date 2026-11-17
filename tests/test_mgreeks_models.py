@@ -306,3 +306,22 @@ class TestMultiAssetGBM:
                 )
                 expected = self.sigma[asset] * L[asset, brownian] * out["paths"][:, asset, self.n_steps]
                 np.testing.assert_allclose(D, expected, rtol=1e-10)
+
+
+def test_flat_custom_local_vol_reproduces_gbm_path_by_path():
+    import numpy as np
+    from mgreeks.models.gbm import GeometricBrownianMotion
+    from mgreeks.models.local_vol import LocalVolModel
+    gbm = GeometricBrownianMotion(r=0.05, q=0.0, sigma=0.25)
+    lv = LocalVolModel(r=0.05, q=0.0, sigma_func=lambda t, S: np.full_like(S, 0.25))
+    a = gbm.simulate(100.0, 0.5, 50, 2000, rng=np.random.default_rng(7))
+    b = lv.simulate(100.0, 0.5, 50, 2000, rng=np.random.default_rng(7))
+    np.testing.assert_allclose(b["terminal"], a["terminal"], rtol=1e-12)
+
+
+def test_sigma_func_with_a_builtin_model_type_is_rejected():
+    import numpy as np
+    import pytest
+    from mgreeks.models.local_vol import LocalVolModel
+    with pytest.raises(ValueError):
+        LocalVolModel(model_type="cev", sigma_func=lambda t, S: np.full_like(S, 0.2))

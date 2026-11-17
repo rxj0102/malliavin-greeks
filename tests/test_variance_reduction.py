@@ -126,7 +126,7 @@ class TestAntitheticVariates:
                                    sim_p["brownian_increments"],
                                    sim_n["brownian_increments"], _disc)
 
-        # Must achieve at least 2× variance reduction for delta (typical: 10-20×)
+        # At least 2x against the same number of plain paths (measured about 2.4 for this call)
         assert res["variance_reduction_ratio"] >= 2.0, (
             f"Antithetic delta VRR={res['variance_reduction_ratio']:.2f}, expected ≥ 2"
         )

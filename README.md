@@ -123,7 +123,7 @@ print(f"Digital Delta: {delta_d['value']:.4f} ± {delta_d['std_error']:.4f}")
 
 ### Variance Reduction
 
-- **Antithetic variates** (`mgreeks.variance_reduction.antithetic`): pairs each path with its Brownian reflection; VRR ≥ 10× for digital call delta
+- **Antithetic variates** (`mgreeks.variance_reduction.antithetic`): pairs each path with its Brownian reflection. For the at-the-money delta (S0 = K = 100, sigma 20%, one year, 100,000 pairs, 5 seeds) the variance falls by a factor of 2.4 for a call and 3.7 for a digital against the same number of plain paths, which is 1.2 and 1.9 per payoff evaluation, since a pair costs two
 - **Control variates** (`mgreeks.variance_reduction.control_variate`): geometric Asian control (closed-form price); delta-hedged portfolio control
 - **Localization** (`mgreeks.variance_reduction.localization`): weight truncation at 99.9th percentile; interval localization for barrier options
 
