@@ -684,40 +684,39 @@ class TestHestonDeltaWeight:
 
 class TestAliasWeightFunctions:
     """
-    Verify that asian_delta_weight_gbm, barrier_delta_weight_gbm,
-    lookback_delta_weight_gbm all equal delta_weight_gbm (W_T formula).
-    Document the known discretization bias.
+    asian_delta_weight_gbm, barrier_delta_weight_gbm and lookback_delta_weight_gbm
+    return the first-increment score, which is unbiased for discrete path payoffs.
+    The terminal weight W_T/(sigma S_0 T) is kept only as the biased comparison below.
     """
 
-    def test_asian_weight_equals_delta_weight_gbm(self):
-        """asian_delta_weight_gbm returns W_T/(σ S_0 T) — same as delta_weight_gbm."""
-        from mgreeks.weights.malliavin_weights import delta_weight_gbm
+    def test_asian_weight_is_first_increment_score(self):
         w_asian = asian_delta_weight_gbm(
             _OUT["paths"], _OUT["brownian_increments"], S0, SIGMA, T, _OUT["times"]
         )
-        W_T = _OUT["brownian_increments"].sum(axis=1)
-        w_euro = delta_weight_gbm(S0, _OUT["terminal"], SIGMA, R, Q, T, W_T)
-        np.testing.assert_array_almost_equal(w_asian, w_euro, decimal=12)
+        np.testing.assert_array_almost_equal(w_asian, _PD_WEIGHT, decimal=10)
 
-    def test_barrier_weight_equals_delta_weight_gbm(self):
-        """barrier_delta_weight_gbm returns W_T/(σ S_0 T)."""
-        from mgreeks.weights.malliavin_weights import delta_weight_gbm
+    def test_barrier_weight_is_first_increment_score(self):
         w_barrier = barrier_delta_weight_gbm(
             _OUT["paths"], _OUT["brownian_increments"], S0, SIGMA, T, _OUT["times"], B_BARRIER
         )
-        W_T = _OUT["brownian_increments"].sum(axis=1)
-        w_euro = delta_weight_gbm(S0, _OUT["terminal"], SIGMA, R, Q, T, W_T)
-        np.testing.assert_array_almost_equal(w_barrier, w_euro, decimal=12)
+        np.testing.assert_array_almost_equal(w_barrier, _PD_WEIGHT, decimal=10)
 
-    def test_lookback_weight_equals_delta_weight_gbm(self):
-        """lookback_delta_weight_gbm returns W_T/(σ S_0 T)."""
-        from mgreeks.weights.malliavin_weights import delta_weight_gbm
+    def test_lookback_weight_is_first_increment_score(self):
         w_lb = lookback_delta_weight_gbm(
             _OUT["paths"], _OUT["brownian_increments"], S0, SIGMA, T, _OUT["times"]
         )
-        W_T = _OUT["brownian_increments"].sum(axis=1)
-        w_euro = delta_weight_gbm(S0, _OUT["terminal"], SIGMA, R, Q, T, W_T)
-        np.testing.assert_array_almost_equal(w_lb, w_euro, decimal=12)
+        np.testing.assert_array_almost_equal(w_lb, _PD_WEIGHT, decimal=10)
+
+    def test_asian_weight_matches_geometric_asian_closed_form_delta(self):
+        """The weight is unbiased: geometric Asian delta against its closed form."""
+        f = GeometricAsianCall(K)(_OUT["paths"], _OUT["times"])
+        w = asian_delta_weight_gbm(
+            _OUT["paths"], _OUT["brownian_increments"], S0, SIGMA, T, _OUT["times"]
+        )
+        x = _disc * f * w
+        est, se = float(x.mean()), float(x.std(ddof=1) / np.sqrt(len(x)))
+        truth = analytical.geometric_asian_greeks(S0, K, T, R, Q, SIGMA, N_STEPS)["delta"]
+        assert abs(est - truth) < 4.0 * se + 0.005, (est, truth, se)
 
     def test_wt_bias_for_arithmetic_asian(self):
         """
