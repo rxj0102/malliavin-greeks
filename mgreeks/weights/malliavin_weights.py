@@ -378,6 +378,18 @@ def all_weights_gbm(
 # Convenience aliases for path-dependent payoffs under GBM
 # ---------------------------------------------------------------------------
 
+def _first_increment_score(
+    brownian_increments: np.ndarray, S0: float, sigma: float, times: np.ndarray
+) -> np.ndarray:
+    """Score of the first transition density: dW_1 / (sigma S_0 dt_1).
+
+    Only p(S_{t_1} | S_0) depends on S_0, so this weight gives an unbiased delta for
+    any payoff of the discretely monitored path (S_{t_1}, ..., S_{t_n}) under GBM.
+    """
+    dt1 = float(times[1] - times[0])
+    return brownian_increments[:, 0] / (S0 * sigma * dt1)
+
+
 def asian_delta_weight_gbm(
     paths: np.ndarray,
     brownian_increments: np.ndarray,
@@ -387,24 +399,17 @@ def asian_delta_weight_gbm(
     times: np.ndarray,
 ) -> np.ndarray:
     """
-    Malliavin delta weight for Asian options under GBM.
+    Malliavin delta weight for discretely monitored Asian options under GBM.
 
-    Returns W_T / (S_0 σ T) — identical to delta_weight_gbm.
+    Returns dW_1 / (sigma S_0 dt_1), the score of the first transition density, which
+    is unbiased for any payoff of the fixings S_{t_1}, ..., S_{t_n}.
 
-    NOTE ON BIAS FOR DISCRETE FIXING DATES
-    ---------------------------------------
-    This formula comes from the continuous-time BEL formula.  For a payoff
-    with n discrete fixing dates t_1,...,t_n (not all equal to T), applying
-    the Wiener-space IBP with constant kernel u_s = 1/(σS_0T) gives a
-    time-weighted estimator that underestimates the delta by a factor of
-    t̄/T (mean fixing time over maturity).  For uniform averaging:
-    t̄/T = (n+1)/(2n) → 1/2 as n → ∞.
-
-    For an unbiased estimator of path-dependent delta, use
-    `delta_weight_path_dependent` (score of the first conditional density).
+    The terminal weight W_T / (sigma S_0 T) is correct only for payoffs of S_T. For an
+    average it is biased by the factor t_bar / T, about (n + 1) / (2 n), so it gives
+    roughly half the true delta (tests/test_greeks_exotic.py measures this). Earlier
+    versions of this function returned that terminal weight.
     """
-    W_T = brownian_increments.sum(axis=1)
-    return W_T / (S0 * sigma * T)
+    return _first_increment_score(brownian_increments, S0, sigma, times)
 
 
 def barrier_delta_weight_gbm(
@@ -418,25 +423,16 @@ def barrier_delta_weight_gbm(
     barrier_type: str = "down_and_out",
 ) -> np.ndarray:
     """
-    Malliavin delta weight for barrier options under GBM.
+    Malliavin delta weight for discretely monitored barrier options under GBM.
 
-    Returns W_T / (S_0 σ T) — the standard GBM delta weight.
-
-    The barrier indicator 1_{survival} is part of the payoff, not the weight.
-    The Malliavin IBP still applies because 1_{survival} is measurable w.r.t.
-    the path and the weight is constructed only from the model (not the payoff).
-
-    For an unbiased discrete-time estimator, use `delta_weight_path_dependent`
-    (score of the first conditional density).  Using W_T/(σS_0T) introduces
-    the same t̄/T bias as for Asian options when monitoring is discrete.
-
-    For continuous monitoring (large n_steps), both estimates converge to the
-    true barrier delta; W_T/(σS_0T) converges more slowly.
-
-    See Gobet & Kohatsu-Higa (2003) for localized variance-reduction variants.
+    Returns dW_1 / (sigma S_0 dt_1). The survival indicator is part of the payoff, and
+    the weight is unbiased for any payoff of the monitored path. The terminal weight
+    W_T / (sigma S_0 T) is biased for barrier payoffs because the indicator depends on
+    the whole path. barrier and barrier_type are accepted for interface symmetry and
+    do not change the weight. See Gobet and Kohatsu-Higa (2003) for localised
+    variants with lower variance.
     """
-    W_T = brownian_increments.sum(axis=1)
-    return W_T / (S0 * sigma * T)
+    return _first_increment_score(brownian_increments, S0, sigma, times)
 
 
 def lookback_delta_weight_gbm(
@@ -448,17 +444,14 @@ def lookback_delta_weight_gbm(
     times: np.ndarray,
 ) -> np.ndarray:
     """
-    Malliavin delta weight for lookback options under GBM.
+    Malliavin delta weight for discretely monitored lookback options under GBM.
 
-    Returns W_T / (S_0 σ T) — the standard GBM delta weight.
-
-    The running maximum/minimum is part of the payoff; the Malliavin weight
-    depends only on the model dynamics and is payoff-independent.  The same
-    discretization bias as for Asian/barrier options applies; use
-    `delta_weight_path_dependent` for unbiased estimation with discrete paths.
+    Returns dW_1 / (sigma S_0 dt_1). If the payoff's running extremum includes S_0
+    itself (paths[:, 0]), the payoff also depends on S_0 directly, and the full delta
+    adds E[df/dS_0] to the weighted estimate.
     """
-    W_T = brownian_increments.sum(axis=1)
-    return W_T / (S0 * sigma * T)
+    return _first_increment_score(brownian_increments, S0, sigma, times)
+
 
 
 # ---------------------------------------------------------------------------
