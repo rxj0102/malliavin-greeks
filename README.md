@@ -95,7 +95,7 @@ print(f"Digital Delta: {delta_d['value']:.4f} ± {delta_d['std_error']:.4f}")
 |-------|-------|-----------|
 | Geometric Brownian Motion | `GeometricBrownianMotion` | Exact log-normal |
 | Constant Elasticity of Variance | `LocalVolModel(model_type='cev')` | Euler–Maruyama |
-| Local volatility (Dupire surface) | `LocalVolModel(model_type='quadratic')` | Euler–Maruyama |
+| Local volatility (parametric quadratic, or any σ(t, S) passed as `sigma_func`) | `LocalVolModel(model_type='quadratic')` | Euler–Maruyama |
 | Heston stochastic volatility | `HestonModel` | Full-truncation Euler (Andersen QE scheme) |
 
 ### Payoffs
@@ -199,6 +199,13 @@ Test coverage:
 | `03_exotic_greeks.ipynb` | Asian, barrier, lookback Greeks. Barrier problem: FD fails near B, Malliavin stays flat. |
 | `04_variance_analysis.ipynb` | Variance ratios, antithetic VRR, timing comparison, practical decision guide. |
 
+## Limits
+
+- **No market calibration.** Every model runs on parameters you set. Local volatility is a parametric quadratic or a σ(t, S) function you supply; nothing here fits a Dupire surface to option prices.
+- **Discretisation bias.** Local volatility and Heston are simulated with Euler-type schemes, so their Greeks carry time-step bias on top of Monte Carlo error. Only GBM is simulated exactly.
+- **Where Malliavin loses.** For smooth payoffs such as a European call, finite differences with common random numbers have lower variance for delta. The gain is for discontinuous payoffs like the digital above, and from getting every Greek from one set of paths.
+- **The ratios above are one configuration.** At-the-money digital, one seed, 1,000,000 paths. Other strikes, maturities and bump sizes give other ratios.
+
 ## Reproducibility
 
 ### Data availability
@@ -218,7 +225,7 @@ uv run pytest -q   # runs the test suite
 
 ### Runtime
 
-The test suite (315 tests) finishes in about 2 minutes on the machine above, including any data downloads it triggers.
+The test suite (280 tests) finishes in about 2 minutes on the machine above, including any data downloads it triggers.
 
 ### Citation
 
